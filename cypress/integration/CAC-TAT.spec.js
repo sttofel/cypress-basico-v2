@@ -1,6 +1,8 @@
 /// <reference types="Cypress" />
 
 describe('Central de Atendimento ao Cliente TAT', () => {
+  const THREE_SECONDS_IN_MS = 3000
+
   beforeEach(() => { 
     cy.visit('./src/index.html')
   })
@@ -10,7 +12,9 @@ describe('Central de Atendimento ao Cliente TAT', () => {
   })
 
   it('preenche os campos obrigatórios e envia o formulário', () => {
-    const longText = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+    const longText = "Lorem Ipsum is simply dummy text of the printing and. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum."
+    cy.clock()
+    
     cy.get('#firstName').type('Filipe')
     cy.get('#lastName').type('Sttofel')
     cy.get('#email').type('filipestt@gmail.com')
@@ -18,10 +22,15 @@ describe('Central de Atendimento ao Cliente TAT', () => {
     //cy.get('button[type="submit"]').click()
     cy.contains('button', 'Enviar').click()
 
-    cy.get('.success').should('be.visible')  
+    cy.get('.success').should('be.visible')
+    
+    cy.tick(THREE_SECONDS_IN_MS)
+    
+    cy.get('.success').should('not.be.visible')  
   })
 
   it('exibe mensagem de erro ao submeter o formulário com um email com formatação inválida', () => {
+    cy.clock()
     cy.get('#firstName').should('be.visible').type('Filipe')
     cy.get('#lastName').should('be.visible').type('Sttofel')
     cy.get('#email').should('be.visible').type('filipestt@gmail,com')
@@ -31,16 +40,22 @@ describe('Central de Atendimento ao Cliente TAT', () => {
     cy.contains('button', 'Enviar').should('be.visible').click()
 
     cy.get('.error').should('be.visible') 
+
+    cy.tick(THREE_SECONDS_IN_MS)
+    cy.get('.error').should('not.be.visible') 
   })
 
-  it('campo telefone continua vazio quando preenchido com valor nao-numerico', () => {
-    cy.get('#phone')
-      .should('be.visible')
-      .type('abcdefghij')
-      .should('have.value', '')
+  Cypress._.times(5, () => {
+    it('campo telefone continua vazio quando preenchido com valor nao-numerico', () => {
+      cy.get('#phone')
+        .should('be.visible')
+        .type('abcdefghij')
+        .should('have.value', '')
+    })
   })
 
   it('exibe mensagem de erro quando o telefone se torna obrigatório mas não é preenchido antes do envio do formulário', () => {
+    cy.clock()
     cy.get('#firstName').type('Filipe')
     cy.get('#lastName').type('Sttofel')
     cy.get('#email').type('filipestt@gmail.com')
@@ -51,6 +66,9 @@ describe('Central de Atendimento ao Cliente TAT', () => {
     cy.contains('button', 'Enviar').click() // para esse por questoes de semantica
 
     cy.get('.error').should('be.visible')
+
+    cy.tick(THREE_SECONDS_IN_MS)
+    cy.get('.error').should('not.be.visible')
   })
 
   it('preenche e limpa os campos nome, sobrenome, email e telefone', () => {
@@ -85,15 +103,25 @@ describe('Central de Atendimento ao Cliente TAT', () => {
 
   it('exibe mensagem de erro ao submeter o formulario sem preencher os campos obrigatorios', () => {
     //cy.get('button[type="submit"]').click()
+    cy.clock()
     cy.contains('button', 'Enviar').should('be.visible').click()
 
     cy.get('.error').should('be.visible')
+
+    cy.tick(THREE_SECONDS_IN_MS)
+    cy.get('.error').should('not.be.visible')
   })
 
   it('envia o formulario com sucesso usando um comando customizado', () => {
+    cy.clock()
+    
     cy.fillMandatoryFieldsAndSubmit()
 
-    cy.get('.success').should('be.visible') 
+    cy.get('.success').should('be.visible')
+    
+    cy.tick(THREE_SECONDS_IN_MS)
+
+    cy.get('.success').should('not.be.visible')
   })
 
   it('seleciona um produto (YouTube) por seu texto', () => {
@@ -167,6 +195,51 @@ describe('Central de Atendimento ao Cliente TAT', () => {
     cy.get('#privacy a').invoke('removeAttr', 'target').click()
 
     cy.contains('Talking About Testing').should('be.visible')
+  })
+
+  it('exibe e esconde as mensagens de sucesso e erro usando o .invoke()', () => {
+    cy.get('.success')
+      .should('not.be.visible')
+      .invoke('show')
+      .should('be.visible')
+      .and('contain', 'Mensagem enviada com sucesso.')
+      .invoke('hide')
+      .should('not.be.visible')
+    cy.get('.error')
+      .should('not.be.visible')
+      .invoke('show')
+      .should('be.visible')
+      .and('contain', 'Valide os campos obrigatórios!')
+      .invoke('hide')
+      .should('not.be.visible')
+  })
+
+  it('preenche a area de texto usando o comando invoke', () => {
+    const longText = Cypress._.repeat('0123456789', 20)
+
+    cy.get('#open-text-area')
+      .invoke('val', longText)
+      .should('have.value', longText)
+  })
+
+  it('faz uma requisição HTTP', () => {
+    cy.request('https://cac-tat.s3.eu-central-1.amazonaws.com/index.html')
+      .should((response) => {
+        const { status, statusText, body } = response // desestruturacao javascript
+        expect(status).to.eq(200)
+        expect(statusText).to.eq('OK')
+        expect(body).to.include('CAC TAT')
+      })
+  })
+
+  it.only('encontra o gato escondido', () => {
+    cy.get('#cat')
+      .invoke('show')
+      .should('be.visible')
+    cy.get('#title')
+      .invoke('text', 'CAT TAT')
+    cy.get('#subtitle')
+      .invoke('text', 'Eu 💚 gatos!')
   })
   
 })
